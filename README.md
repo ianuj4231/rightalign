@@ -152,5 +152,7 @@ and finishes with output such as `Passed: 9/9`.
    worker records the response in tables. Since we have stage-wise checkpointing, When the worker restarts, it uses the saved state - idempotency key to find and verify the existing gateway transaction instead of
    issuing the refund again.
 
-For the commands, database setup, and expected results for each scenario, see
+For copy-paste commands and database checks, use the
+[`docs/scenario_baby_steps/README.md`](docs/scenario_baby_steps/README.md) walkthrough.
+The original detailed runbook is in
 [`docs/manual_test_scenarios.md`](docs/manual_test_scenarios.md).
