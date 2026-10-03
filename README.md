@@ -7,7 +7,7 @@ is allowed. MySQL stores the facts needed to resume safely after a timeout or cr
 
 ## The two problems it solves
 
-First issue, Imagine an external payment gateway accepts a refund but its response times out. A naive agent
+First risk, Imagine an external payment gateway accepts a refund but its response times out. A naive agent
 may interpret `timeout` as failure and a naive agent could pass control to LLM and LLM sees  timeout error  and calls `issue_refund` tool again. The customer then receives two refunds.
 
 A second risk is prompt injection. Malicious or persuasive customer text may try to
