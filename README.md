@@ -1,6 +1,6 @@
 # Autonomous Refund Operator
 
-A CLI proof of concept for processing refunds safely with an LLM.
+A CLI proof of concept for processing refunds safely with LLM and tools.
 
 The LLM understands the customer’s message. Deterministic Python code decides what
 is allowed. MySQL stores the facts needed to resume safely after a timeout or crash.
@@ -49,10 +49,42 @@ Responsibilities are deliberately separated:
 - **MySQL:** stores durable workflow, refund, order, ticket, and gateway state.
 - **Gateway layer:** uses one idempotency key for each logical refund.
 
-The architecture prevents prompt injection from bypassing refund policy or
-authorizing money movement. Untrusted text may influence the LLM’s interpretation,
-but the LLM cannot approve a refund, choose a trusted amount, skip deterministic
-checks, or decide that a timed-out payment succeeded.
+### How problem 1 is solved: duplicate refunds after a timeout
+
+1. The customer asks for a refund in a support ticket.
+2. The CLI receives the ticket ID. Python creates a new agent run, or resumes the
+   existing unfinished run, and saves its current state in MySQL.
+3. Python loads the ticket from MySQL and sends only the customer message to the
+   LLM. The LLM classifies the intent as `REFUND_REQUEST` or `UNKNOWN` and returns a
+   Pydantic-validated result. It cannot call the payment gateway.
+4. For a refund request, Python loads the trusted order and refund policy from
+   MySQL. Python checks the refund window and auto-approval limit of the organization from refund_policy table, trusted order amount, and whether human approval is required.
+5. If approval is required, the run stops in `WAITING_APPROVAL`. Only the trusted
+   CLI approval command can move it to `REFUND_READY`.
+6. Before calling the gateway, Python creates the local refund record and persists
+   `REFUND_EXECUTING` together with one idempotency key, such as `refund_ORD456`.
+7. Python calls the gateway with that persisted key. The gateway records the refund
+   once, even if the response is lost and the same request reaches it again.
+8. If the gateway response times out, Python records `REFUND_OUTCOME_UNKNOWN`. A
+   timeout means the result is unknown; it does not mean the refund failed.
+9. On retry or restart, Python reloads the saved state and queries the gateway with
+   the same idempotency key. It verifies the existing transaction instead of asking
+   the LLM to call issue_refund tool.
+10. Only after gateway success is verified does Python mark the refund successful,
+    mark the order refunded, resolve the ticket, and move the run to `COMPLETE`.
+
+### How problem 2 is solved: prompt injection and false customer claims
+
+- The LLM receives only the customer message and can only return a validated intent
+  classification. No `issue_refund` function or unrestricted database tool is
+  exposed to it.
+- Python loads the order amount, refund window, and approval status from trusted
+  MySQL records. Values and approval claims in customer text are ignored for these
+  decisions.
+- The deterministic state machine permits refund execution only after policy passes
+  and any required trusted human approval is recorded.
+- Only Python can call the gateway from the allowed `REFUND_READY` state. The LLM
+  cannot approve a refund, skip a state, choose the amount, or trigger a retry.
 
 ## Workflow
 
