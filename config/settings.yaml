@@ -1,0 +1,15 @@
+llm:
+  provider: gemini
+  openrouter:
+    # model: "openai/gpt"
+    model: "openrouter/free"
+  gemini:
+    model: "gemini-3.5-flash"
+
+database:
+  host: localhost
+  port: 3306
+  name: refund_operator
+
+mock_gateway:
+  simulate_timeout_after_commit: true
