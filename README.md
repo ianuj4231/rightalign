@@ -2,6 +2,8 @@
 
 A CLI proof of concept for processing refunds safely with LLM and tools.
 
+[Watch the video demo](https://www.youtube.com/watch?v=THEXlbMkrSo)
+
 The LLM understands the customer’s message. Deterministic Python code decides what
 is allowed. MySQL stores the facts needed to resume safely after a timeout or crash.
 
